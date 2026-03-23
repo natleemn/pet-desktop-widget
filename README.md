@@ -166,4 +166,4 @@ MIT — do whatever you want with it. Made with love for pets everywhere.
 
 Here's mine — Biscuit and Minty!
 
-![Biscuit and Minty](biscuit-and-minty.png)
+<img src="biscuit.png" alt="Biscuit" height="200"> <img src="minty.png" alt="Minty" height="180">
