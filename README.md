@@ -163,3 +163,7 @@ The behavior engine uses a simple state machine: each pet is always in one state
 ## License
 
 MIT — do whatever you want with it. Made with love for pets everywhere.
+
+Here's mine — Biscuit and Minty!
+
+![Biscuit and Minty](biscuit-and-minty.png)
