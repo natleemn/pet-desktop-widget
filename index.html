@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+      user-select: none;
+    }
+
+    /* Semi-transparent background so you can see the widget area */
+    body {
+      background: rgba(245, 240, 233, 0.30);
+      border-radius: 12px;
+      border: 1px solid rgba(180, 170, 155, 0.25);
+    }
+
+    /* Drag zone — inner area is draggable */
+    .drag-zone {
+      position: absolute;
+      top: 8px; left: 8px; right: 8px; bottom: 8px;
+      -webkit-app-region: drag;
+    }
+
+    /* Resize edges — 8px border around the window is NOT draggable so resize works */
+    .resize-edge {
+      position: absolute;
+      -webkit-app-region: no-drag;
+    }
+    .resize-edge.top    { top: 0; left: 0; right: 0; height: 8px; cursor: ns-resize; }
+    .resize-edge.bottom { bottom: 0; left: 0; right: 0; height: 8px; cursor: ns-resize; }
+    .resize-edge.left   { top: 0; bottom: 0; left: 0; width: 8px; cursor: ew-resize; }
+    .resize-edge.right  { top: 0; bottom: 0; right: 0; width: 8px; cursor: ew-resize; }
+    .resize-edge.top-left     { top: 0; left: 0; width: 12px; height: 12px; cursor: nwse-resize; }
+    .resize-edge.top-right    { top: 0; right: 0; width: 12px; height: 12px; cursor: nesw-resize; }
+    .resize-edge.bottom-left  { bottom: 0; left: 0; width: 12px; height: 12px; cursor: nesw-resize; }
+    .resize-edge.bottom-right { bottom: 0; right: 0; width: 12px; height: 12px; cursor: nwse-resize; }
+
+    .pet {
+      -webkit-app-region: no-drag;
+      position: absolute;
+      image-rendering: auto;
+      transition: none;
+    }
+
+    .pet img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- Resize edges (must be outside drag zone so resize works) -->
+  <div class="resize-edge top"></div>
+  <div class="resize-edge bottom"></div>
+  <div class="resize-edge left"></div>
+  <div class="resize-edge right"></div>
+  <div class="resize-edge top-left"></div>
+  <div class="resize-edge top-right"></div>
+  <div class="resize-edge bottom-left"></div>
+  <div class="resize-edge bottom-right"></div>
+
+  <!-- Draggable inner area -->
+  <div class="drag-zone"></div>
+
+  <!-- Pet containers — the IDs must match PET_1_NAME and PET_2_NAME in renderer.js -->
+  <div class="pet" id="pet1">
+    <img id="pet1-img" src="" alt="Pet 1">
+  </div>
+  <div class="pet" id="pet2">
+    <img id="pet2-img" src="" alt="Pet 2">
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

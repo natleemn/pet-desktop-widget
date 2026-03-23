@@ -1,0 +1,11 @@
+node_modules/
+*.jpeg
+*.JPEG
+.DS_Store
+.claude/
+package-lock.json
+dock-icon.png
+tray-icon.png
+tray-icon-*.png
+icon.icns
+icon.iconset/

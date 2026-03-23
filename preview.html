@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pet Widget — Live Demo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Georgia', serif;
+      background: #f5f0eb;
+      color: #3a3530;
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    .topbar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      background: rgba(245, 240, 235, 0.92);
+      backdrop-filter: blur(8px);
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 100;
+      border-bottom: 1px solid #e0d8ce;
+    }
+    .topbar h1 { font-size: 16px; font-weight: 600; color: #5a4f44; }
+    .topbar .controls { display: flex; gap: 8px; }
+    .btn {
+      padding: 5px 14px;
+      border: 1px solid #c8bfb4;
+      border-radius: 6px;
+      background: #faf7f3;
+      color: #5a4f44;
+      font-family: inherit;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn:hover { background: #f0ebe4; }
+    .btn.active { background: #6a5d50; color: white; border-color: #6a5d50; }
+    .status { font-size: 11px; color: #9a8d80; font-style: italic; }
+
+    .stage {
+      position: absolute;
+      top: 50px; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(180deg, #e8ddd0 0%, #c8b8a4 60%, #8a7a66 100%);
+      overflow: hidden;
+    }
+
+    .ground {
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 25%;
+      background: linear-gradient(180deg, #a09080 0%, #8a7a66 100%);
+      border-top: 2px solid #b0a090;
+    }
+
+    .pet {
+      position: absolute;
+      cursor: pointer;
+    }
+    .pet img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>Pet Widget — Live Demo</h1>
+  <div class="controls">
+    <button class="btn" onclick="triggerBoth('idle')">Idle</button>
+    <button class="btn" onclick="triggerBoth('running')">Run</button>
+    <button class="btn" onclick="triggerBoth('eating')">Eat</button>
+    <button class="btn" onclick="triggerBoth('grooming')">Groom</button>
+    <button class="btn" onclick="triggerBoth('popcorning')">Popcorn</button>
+    <button class="btn" onclick="triggerBoth('sleeping')">Sleep</button>
+    <button class="btn" onclick="autoMode()" id="auto-btn">Auto</button>
+  </div>
+  <div class="status" id="status">Loading sprites...</div>
+</div>
+
+<div class="stage">
+  <div class="ground"></div>
+  <div class="pet" id="pet1">
+    <img id="pet1-img" src="" alt="Pet 1">
+  </div>
+  <div class="pet" id="pet2">
+    <img id="pet2-img" src="" alt="Pet 2">
+  </div>
+</div>
+
+<script>
+// ─── Config — must match renderer.js ────────────────────────────────────────
+const PET_1_NAME = 'pet1';
+const PET_2_NAME = 'pet2';
+
+const POSES = ['idle', 'running', 'eating', 'grooming', 'popcorning', 'sleeping'];
+const spriteCache = {};
+spriteCache[PET_1_NAME] = {};
+spriteCache[PET_2_NAME] = {};
+let loaded = 0;
+
+function preload(cb) {
+  [PET_1_NAME, PET_2_NAME].forEach(name => {
+    POSES.forEach(pose => {
+      const img = new Image();
+      img.onload = () => { spriteCache[name][pose] = img; loaded++; if (loaded === 12) cb(); };
+      img.onerror = () => { console.warn(`Missing: ${name}-${pose}.png`); loaded++; if (loaded === 12) cb(); };
+      img.src = `sprites/${name}-${pose}.png`;
+    });
+  });
+}
+
+const ANIM = {
+  idleBob: 2, idleBobSpeed: 0.002,
+  runSpeed: 2.5,
+  popcornHeight: 50, popcornBounces: 3,
+  eatBob: 3, eatBobSpeed: 0.008,
+  groomSway: 2, groomSpeed: 0.005,
+  breathe: 1.5, breatheSpeed: 0.001,
+};
+
+class DemoPet {
+  constructor(name, size, x) {
+    this.name = name;
+    this.size = size;
+    this.el = document.getElementById(name);
+    this.imgEl = document.getElementById(`${name}-img`);
+    this.x = x;
+    this.baseY = 0;
+    this.y = 0;
+    this.state = 'idle';
+    this.stateStart = Date.now();
+    this.dur = 99999;
+    this.facingRight = true;
+    this.runTarget = 0;
+    this.frame = 0;
+    this._calcGround();
+    this.setSprite('idle');
+    this._pos();
+  }
+
+  _calcGround() {
+    const stage = document.querySelector('.stage');
+    this.baseY = stage.clientHeight * 0.72 - this.size * 0.8;
+    this.y = this.baseY;
+  }
+
+  setSprite(pose) {
+    const s = spriteCache[this.name][pose];
+    if (!s) return;
+    this.imgEl.src = s.src;
+    const aspect = s.naturalWidth / s.naturalHeight;
+    if (aspect > 1) {
+      this.el.style.width = `${this.size}px`;
+      this.el.style.height = `${this.size / aspect}px`;
+    } else {
+      this.el.style.height = `${this.size}px`;
+      this.el.style.width = `${this.size * aspect}px`;
+    }
+  }
+
+  _pos() {
+    this.el.style.left = `${this.x}px`;
+    this.el.style.top = `${this.y}px`;
+    this.el.style.transform = this.facingRight ? 'scaleX(1)' : 'scaleX(-1)';
+  }
+
+  switchTo(state) {
+    this.state = state;
+    this.stateStart = Date.now();
+    this.frame = 0;
+    this.setSprite(state);
+    this.y = this.baseY;
+
+    if (state === 'running') {
+      const maxX = document.querySelector('.stage').clientWidth - this.size;
+      this.runTarget = Math.random() * maxX;
+      this.facingRight = this.runTarget > this.x;
+      this.dur = 6000;
+    } else if (state === 'eating') { this.dur = 8000; }
+    else if (state === 'grooming') { this.dur = 6000; }
+    else if (state === 'popcorning') { this.dur = 2500; }
+    else if (state === 'sleeping') { this.dur = 15000; }
+    else { this.dur = 99999; }
+
+    this._pos();
+  }
+
+  update(now) {
+    const elapsed = now - this.stateStart;
+
+    switch (this.state) {
+      case 'idle':
+        this.y = this.baseY + Math.sin(now * ANIM.idleBobSpeed) * ANIM.idleBob;
+        break;
+
+      case 'running': {
+        const dx = this.runTarget - this.x;
+        const speed = ANIM.runSpeed * (document.querySelector('.stage').clientWidth / 400);
+        if (Math.abs(dx) > speed) {
+          this.x += Math.sign(dx) * speed;
+          this.y = this.baseY - Math.abs(Math.sin(this.frame * 0.15)) * 10;
+          this.frame++;
+        } else {
+          this.x = this.runTarget;
+          this.switchTo('idle');
+          return;
+        }
+        break;
+      }
+
+      case 'eating':
+        this.y = this.baseY + Math.sin(elapsed * ANIM.eatBobSpeed) * ANIM.eatBob;
+        if (elapsed > this.dur) { this.switchTo('idle'); return; }
+        break;
+
+      case 'grooming':
+        this.y = this.baseY + Math.sin(elapsed * ANIM.groomSpeed) * ANIM.groomSway;
+        if (elapsed > this.dur) { this.switchTo('idle'); return; }
+        break;
+
+      case 'popcorning': {
+        const t = elapsed / this.dur;
+        this.y = this.baseY - Math.abs(Math.sin(t * Math.PI * ANIM.popcornBounces)) * ANIM.popcornHeight;
+        this.x += (Math.random() - 0.5) * 3;
+        const maxX = document.querySelector('.stage').clientWidth - this.size;
+        this.x = Math.max(0, Math.min(maxX, this.x));
+        if (elapsed > this.dur) { this.y = this.baseY; this.switchTo('idle'); return; }
+        break;
+      }
+
+      case 'sleeping':
+        this.y = this.baseY + Math.sin(now * ANIM.breatheSpeed) * ANIM.breathe;
+        if (elapsed > this.dur) { this.switchTo('idle'); return; }
+        break;
+    }
+
+    this._pos();
+  }
+}
+
+let p1, p2;
+let isAuto = false;
+let autoTimers = [];
+
+function triggerBoth(state) {
+  stopAuto();
+  document.getElementById('auto-btn').classList.remove('active');
+  p1.switchTo(state);
+  setTimeout(() => p2.switchTo(state), 300 + Math.random() * 700);
+  document.getElementById('status').textContent = `Both → ${state}`;
+}
+
+function autoMode() {
+  const btn = document.getElementById('auto-btn');
+  if (isAuto) {
+    stopAuto();
+    btn.classList.remove('active');
+    document.getElementById('status').textContent = 'Auto mode off';
+    return;
+  }
+  isAuto = true;
+  btn.classList.add('active');
+  document.getElementById('status').textContent = 'Auto mode — behaviors trigger naturally';
+  scheduleAuto();
+}
+
+function stopAuto() {
+  isAuto = false;
+  autoTimers.forEach(t => clearTimeout(t));
+  autoTimers = [];
+}
+
+function scheduleAuto() {
+  if (!isAuto) return;
+  const actions = ['running', 'eating', 'grooming', 'popcorning'];
+  const randomAction = () => actions[Math.floor(Math.random() * actions.length)];
+
+  function scheduleOne(pet, label) {
+    const delay = 5000 + Math.random() * 15000;
+    const timer = setTimeout(() => {
+      if (!isAuto) return;
+      const action = randomAction();
+      pet.switchTo(action);
+      document.getElementById('status').textContent = `${label} → ${action}`;
+      scheduleOne(pet, label);
+    }, delay);
+    autoTimers.push(timer);
+  }
+
+  scheduleOne(p1, 'Pet 1');
+  scheduleOne(p2, 'Pet 2');
+}
+
+function loop() {
+  const now = Date.now();
+  p1.update(now);
+  p2.update(now);
+  requestAnimationFrame(loop);
+}
+
+preload(() => {
+  document.getElementById('status').textContent = 'All sprites loaded. Click a button or try Auto mode.';
+  const stage = document.querySelector('.stage');
+  const sw = stage.clientWidth;
+  const bSize = Math.min(sw * 0.22, 180);
+  const mSize = bSize * 0.9;
+
+  p1 = new DemoPet(PET_1_NAME, bSize, sw * 0.2);
+  p2 = new DemoPet(PET_2_NAME, mSize, sw * 0.6);
+
+  requestAnimationFrame(loop);
+});
+
+window.addEventListener('resize', () => {
+  if (!p1 || !p2) return;
+  const stage = document.querySelector('.stage');
+  const sw = stage.clientWidth;
+  const bSize = Math.min(sw * 0.22, 180);
+
+  p1.size = bSize;
+  p1._calcGround();
+  p1.setSprite(p1.state);
+
+  p2.size = bSize * 0.9;
+  p2._calcGround();
+  p2.setSprite(p2.state);
+});
+</script>
+</body>
+</html>

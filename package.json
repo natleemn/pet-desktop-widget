@@ -1,0 +1,14 @@
+{
+  "name": "pet-desktop-widget",
+  "version": "1.0.0",
+  "description": "A cute floating desktop widget that shows your pets hanging out in a corner of your screen",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-packager . 'Pet Widget' --platform=darwin --arch=arm64 --overwrite --icon=icon.icns"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-packager": "^17.1.2"
+  }
+}
